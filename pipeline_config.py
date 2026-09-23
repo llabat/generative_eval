@@ -43,6 +43,12 @@ Config shape (see README-style example in run_pipeline.py's docstring):
       batch_size: 64
       max_new_tokens: 64          # matches IssueBench's own budget -- see
                                     #  classify_stance.py's docstring
+      # temperature: 1.0            # optional, default null -> greedy; set to
+                                      #  match IssueBench's own protocol instead
+      # backend: vllm               # optional, default "transformers" -- see
+                                      #  classify_stance.py's docstring
+      # tensor_parallel_size: 2      # vllm backend only -- shard a large judge
+                                      #  (e.g. 70B) across multiple GPUs
 
     refusal_classifier:           # omit this section entirely to skip the refusal stage
       checkpoint: /path/to/refusal/checkpoint

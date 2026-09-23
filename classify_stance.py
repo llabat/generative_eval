@@ -24,12 +24,28 @@ Requires a `stance_classifier:` section:
       model: /path/to/judge/model
       template_id: templ-6          # id from templates_csv, required
       templates_csv: adapted_issuebench_stance_prompt_templates.csv  # optional, default shown
-      batch_size: 64                 # optional, default 64
+      batch_size: 64                 # optional, default 64; ignored by the vllm backend,
+                                       #  which submits every row as one batched call
       max_new_tokens: 64             # optional, default 64 -- matches IssueBench's
                                        #  own budget for this judge task; not every
                                        #  model answers with just the bare label, so
                                        #  parse_label() below allows for a completion
                                        #  that reasons before answering
+      temperature: null              # optional, default null -> greedy decoding
+                                       #  (do_sample=False / vllm temperature=0.0);
+                                       #  set e.g. 1.0 to match IssueBench's own
+                                       #  stance-classifier protocol instead. Recorded
+                                       #  per-row in stance_temperature (0.0 for greedy)
+                                       #  so sweeps stay distinguishable, same as
+                                       #  stance_template_id below.
+      backend: transformers          # optional, default "transformers"; or "vllm"
+                                       #  -- see vllm_backend.py
+      tensor_parallel_size: 1        # optional, default 1; vllm backend only -- e.g. 2
+                                       #  to shard a 70B-class judge across two 80GB
+                                       #  GPUs whose fp16 weights alone (~140GB) don't
+                                       #  fit on one card. Ignored by the transformers
+                                       #  backend, which already shards across every
+                                       #  visible GPU via device_map="auto".
 
 Reads <output_dir>/final.csv if it already exists (e.g. classify_refusal.py
 ran first), else <output_dir>/generations.csv, and writes/overwrites
@@ -93,9 +109,36 @@ def parse_label(raw):
     return matches[-1].lower() if matches else None
 
 
-def classify_stance_batch(model, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64):
+def load_judge_model(model_path, tensor_parallel_size=1):
+    """Transformers backend counterpart to vllm_backend.load_judge_model.
+    tensor_parallel_size is accepted for interface parity (see
+    backend_module()) but ignored -- device_map="auto" already shards
+    across every visible GPU on its own.
+    """
+    print(f"Loading judge model {model_path}")
+    tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side="left")
+    model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", dtype=torch.float16)
+    model.eval()
+    return model, tokenizer
+
+
+def backend_module(name):
+    if name == "transformers":
+        return sys.modules[__name__]
+    if name == "vllm":
+        import vllm_backend
+        return vllm_backend
+    raise ValueError(f"Unknown stance_classifier.backend: {name!r} (expected 'transformers' or 'vllm')")
+
+
+def classify_stance_batch(model, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64, temperature=None):
     results = []
     pbar = tqdm(total=len(stances), desc="Classifying stance")
+
+    # temperature=None -> greedy (do_sample=False ignores any temperature
+    # kwarg entirely); a real value -> sample at that temperature, e.g. 1.0
+    # to match IssueBench's own protocol for this judge task.
+    sampling_kwargs = {"do_sample": False} if temperature is None else {"do_sample": True, "temperature": temperature}
 
     for i in range(0, len(stances), batch_size):
         batch_stances = stances[i:i + batch_size]
@@ -119,9 +162,9 @@ def classify_stance_batch(model, tokenizer, template, stances, responses, batch_
 
         outputs = model.generate(
             **inputs,
-            do_sample=False,
             max_new_tokens=max_new_tokens,
             pad_token_id=tokenizer.eos_token_id,
+            **sampling_kwargs,
         )
 
         prompt_len = inputs["input_ids"].shape[1]
@@ -165,13 +208,13 @@ def main():
             raise ValueError(f"Expected a '{col}' column in {input_csv}")
 
     model_path = sc_cfg["model"]
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    print(f"Loading judge model {model_path} on {device}")
-    tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side="left")
-    model = AutoModelForCausalLM.from_pretrained(model_path, device_map=device, dtype=torch.float16)
-    model.eval()
+    backend = backend_module(sc_cfg.get("backend", "transformers"))
+    model, tokenizer = backend.load_judge_model(
+        model_path, tensor_parallel_size=sc_cfg.get("tensor_parallel_size", 1)
+    )
 
-    raw = classify_stance_batch(
+    temperature = sc_cfg.get("temperature")
+    raw = backend.classify_stance_batch(
         model,
         tokenizer,
         template,
@@ -179,6 +222,7 @@ def main():
         df["response"].fillna("").tolist(),
         batch_size=sc_cfg.get("batch_size", 64),
         max_new_tokens=sc_cfg.get("max_new_tokens", 64),
+        temperature=temperature,
     )
 
     parsed = [parse_label(r) for r in raw]
@@ -189,6 +233,7 @@ def main():
     df["stance_score"] = pd.to_numeric(df["stance_pred"], errors="coerce")  # NaN for "refusal"/unparseable
     df["stance_template_id"] = template_id
     df["stance_judge_model"] = model_path
+    df["stance_temperature"] = temperature if temperature is not None else 0.0
 
     df.to_csv(final_csv, index=False)
     print(f"Saved {len(df)} rows with stance predictions to {final_csv}")

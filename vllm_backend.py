@@ -145,3 +145,48 @@ def run_generation(
             csv.DictWriter(f, fieldnames=fieldnames).writeheader()
 
     return n_written
+
+
+def load_judge_model(model_path, tensor_parallel_size=1):
+    """vLLM counterpart to classify_stance.load_judge_model, selected via
+    `stance_classifier.backend: vllm`. tensor_parallel_size shards the model
+    across that many GPUs -- e.g. 2 for a 70B judge on two 80GB H100s, whose
+    fp16 weights alone (~140GB) don't fit on a single one. Separate from
+    load_model() above since a judge doesn't need generate_texts.py's
+    per-model sampling-config override bookkeeping.
+    """
+    from vllm import LLM
+
+    name = model_path.rstrip("/").split("/")[-1]
+    print(f"Loading {name} with vLLM (tensor_parallel_size={tensor_parallel_size})...")
+    llm = LLM(model=model_path, dtype="float16", tensor_parallel_size=tensor_parallel_size)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side="left")
+    return llm, tokenizer
+
+
+def classify_stance_batch(llm, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64, temperature=None):
+    """Same signature/semantics as classify_stance.classify_stance_batch, but
+    submits every (stance, response) pair to vLLM as one batched call
+    instead of chunking through model.generate() -- batch_size is accepted
+    but unused, kept only so main() doesn't need backend-specific kwargs.
+    temperature=None -> greedy, matching the transformers backend's
+    do_sample=False -- vLLM's own temperature=0.0 already means greedy, so
+    no separate do_sample flag is needed here.
+    """
+    from vllm import SamplingParams
+
+    texts = [
+        template.format(stance=stance, response_text=response)
+        for stance, response in zip(stances, responses)
+    ]
+    prompts = [
+        tokenizer.apply_chat_template(
+            [{"role": "user", "content": text}], add_generation_prompt=True, tokenize=False
+        )
+        for text in texts
+    ]
+
+    params = SamplingParams(n=1, temperature=temperature or 0.0, max_tokens=max_new_tokens)
+    print(f"Submitting {len(prompts)} stance-classification requests to vLLM...")
+    outputs = llm.generate(prompts, params)
+    return [output.outputs[0].text for output in outputs]

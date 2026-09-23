@@ -1,0 +1,30 @@
+# Timing pilot: real target model, full 54-template set, real max_new_tokens
+# and sampling depth, but only 5 of the 55 questions (test_opinions.csv) --
+# 5 x 54 x 300 = 81,000 generations, ~9% of a full 55-question run. Purpose
+# is to get an accurate vLLM throughput number (tok/s, generations/s) before
+# sizing --time and committing the full configs/allenai--Llama-3.1-Tulu/*.yml
+# runs. Not meant to be kept around -- delete once the real runs are sized.
+
+model: allenai/Llama-3.1-Tulu-3-8B-SFT
+
+sampling_configs:
+  - name: model_default
+    num_generations: 100
+    params: {}
+  - name: low_temp
+    num_generations: 100
+    params: {temperature: 0.3, top_p: 0.9, top_k: 50}
+  - name: high_temp
+    num_generations: 100
+    params: {temperature: 1.0, top_p: 1.0, top_k: 50}
+
+generation:
+  max_new_tokens: 1024
+  backend: vllm
+
+prompts:
+  opinions_csv: test_opinions.csv     # 5 of the 55 questions
+  templates_csv: templates.csv        # full 54-template set (18 neutral, 18 support, 18 oppose)
+
+output_dir: runs/pilot_vllm_timing
+resume: true

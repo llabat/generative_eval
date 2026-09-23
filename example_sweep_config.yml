@@ -1,0 +1,44 @@
+# Example sweep config: same as example_config.yml but for a list of
+# models instead of one `model:`. Run with:
+#   python run_pipeline_sweep.py example_sweep_config.yml
+# Each model gets its own runs/<model_name>/ with its own
+# {prompts,generations,final}.csv and generated config.yml.
+
+models:
+  - /data/labat/models/leolabat/Llama-3.1-Tulu-8B-SFT-100k-No-Refusal
+  - /data/labat/models/leolabat/Llama-3.1-Tulu-8B-SFT-100k
+  - /data/labat/models/leolabat/Olmo-2-7B-SFT-100k
+  - /data/labat/models/leolabat/Qwen2.5-7B-SFT-100k
+
+sampling_configs:
+  - name: model_default
+    num_generations: 100
+    params: {}
+  - name: low_temp
+    num_generations: 50
+    params: {temperature: 0.3, top_p: 0.9, top_k: 50}
+  - name: high_temp
+    num_generations: 100
+    params: {temperature: 1.0, top_p: 1.0, top_k: 50}
+
+generation:
+  max_new_tokens: 1024
+
+prompts:
+  opinions_csv: mevs_opinions.csv     # question_id, stance columns
+  templates_csv: templates.csv        # template_id, template columns
+
+stance_classifier:
+  model: /data/labat/models/leolabat/Llama-3.1-Tulu-8B-SFT-100k
+  template_id: templ-5   # IssueBench's own pick (extended dynamic prompt, llm
+                          #  framing, negative examples, text first)
+  batch_size: 64
+  max_new_tokens: 64
+
+refusal_classifier:
+  checkpoint: /home/labat/refusal/configs/ca_and_ft/checkpoints
+  batch_size: 256
+  max_length: 4096
+
+output_dir: runs/
+resume: true

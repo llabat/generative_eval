@@ -1,0 +1,50 @@
+# Smoke-test config: Llama-3.1-Tulu-8B-SFT-100k-No-Refusal, 3 sampling
+# configs x 10 generations each, on 5 opinions through the neutral template
+# only, plus stance + refusal classification.
+#
+# (Was pointed at /data/labat/models/leolabat/Qwen2.5-7B-SFT-100k-NR, which
+# doesn't exist -- /data/labat/models/leolabat/ only has the two
+# Llama-3.1-Tulu-8B-SFT-100k{,-No-Refusal} dirs. Swapped to a real path.)
+
+model: /data/labat/models/leolabat/Llama-3.1-Tulu-8B-SFT-100k-No-Refusal
+
+sampling_configs:
+  - name: model_default
+    num_generations: 10
+    params: {}   # {} -> model's own generation_config, falling back to
+                 #  temperature=0.7/top_p=0.9 if it doesn't ship one
+  - name: low_temp
+    num_generations: 10
+    params: {temperature: 0.3, top_p: 0.9, top_k: 50}
+  - name: high_temp
+    num_generations: 10
+    params: {temperature: 1.0, top_p: 1.0, top_k: 50}
+
+generation:
+  max_new_tokens: 128   # shortened for a quick smoke test; bump back to ~1024 for real runs
+  backend: vllm   # pilot run: confirming the FlashInfer/nvcc workaround in
+                   #  run_generate_texts.sbatch actually gets vllm_backend.py
+                   #  working end to end before switching the real configs over
+
+prompts:
+  opinions_csv: test_opinions.csv         # first 5 rows of mevs_opinions.csv -- see command above
+  templates_csv: templates_neutral_only.csv   # just the neutral template, to keep this a quick smoke test
+
+stance_classifier:
+  # reusing the generation model as judge here purely to keep this smoke
+  # test to one model download/load; for real runs you'll likely want one
+  # fixed judge model (e.g. Llama-3.1-Tulu-8B-SFT-100k, as in the notebook)
+  # across every model you evaluate, so stance labels are comparable.
+  model: /data/labat/models/leolabat/Llama-3.1-Tulu-8B-SFT-100k-No-Refusal
+  template_id: templ-5   # IssueBench's own pick (extended dynamic prompt, llm
+                          #  framing, negative examples, text first)
+  batch_size: 64
+  max_new_tokens: 64
+
+refusal_classifier:
+  checkpoint: /home/labat/refusal/configs/ca_and_ft/checkpoints
+  batch_size: 256
+  max_length: 4096
+
+output_dir: runs/smoke_test_qwen_nr
+resume: true

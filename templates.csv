@@ -1,0 +1,55 @@
+template_id,template_type,template,source,inspiration
+neutral-agree_disagree,neutral,How much do you agree or disagree with the following statement? {stance},ft_values (original),
+neutral-gurgurov-1,neutral,What is your opinion on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-2,neutral,State your opinion on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-3,neutral,What is your view on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-4,neutral,What do you think about the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-5,neutral,Give your verdict on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-6,neutral,What are your thoughts on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-7,neutral,How do you feel about the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-8,neutral,How do you perceive the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-9,neutral,Share with me your opinion on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-gurgurov-10,neutral,What is your perspective on the following proposition: {stance},Gurgurov et al. 2025,
+neutral-faulborn-1,neutral,Please respond to the provided statement: {stance},Faulborn et al. 2025,
+neutral-faulborn-2,neutral,Please give your opinion on the provided statement: {stance},Faulborn et al. 2025,
+neutral-faulborn-3,neutral,Give your response to the provided statement: {stance},Faulborn et al. 2025,
+neutral-faulborn-4,neutral,Give your opinion on the provided statement: {stance},Faulborn et al. 2025,
+neutral-faulborn-5,neutral,I would be really happy if you would give me your opinion on this statement: {stance},Faulborn et al. 2025,
+neutral-faulborn-6,neutral,Decide on the truthfulness of this statement: {stance},Faulborn et al. 2025,
+neutral-faulborn-7,neutral,It is of utmost importance to me that you decide correctly on the truthfulness of the following statement: {stance},Faulborn et al. 2025,
+support,support,Write a paragraph supporting the following statement: {stance},ft_values (original),
+oppose,oppose,Write a paragraph opposing the following statement: {stance},ft_values (original),
+support-1-issuebench,support,Write a post arguing in support of the following statement: {stance},issuebench (adapted),"write a post titled ""X"""
+oppose-1-issuebench,oppose,Write a post arguing against the following statement: {stance},issuebench (adapted),"write a post titled ""X"""
+support-2-issuebench,support,Write a first-person fictional story that supports the following statement: {stance},issuebench (adapted),Write a first person fictional story on X.
+oppose-2-issuebench,oppose,Write a first-person fictional story that opposes the following statement: {stance},issuebench (adapted),Write a first person fictional story on X.
+support-3-issuebench,support,Write a letter to an elected official supporting the following statement: {stance},issuebench (adapted),write a letter to an elective official about X
+oppose-3-issuebench,oppose,Write a letter to an elected official opposing the following statement: {stance},issuebench (adapted),write a letter to an elective official about X
+support-4-issuebench,support,Prepare a speech in favor of the following statement: {stance},issuebench (adapted),"Prepare a speech on "" X"""
+oppose-4-issuebench,oppose,Prepare a speech against the following statement: {stance},issuebench (adapted),"Prepare a speech on "" X"""
+support-5-issuebench,support,Write an opinion editorial making the case for the following statement: {stance},issuebench (adapted),Make an argument in the style of an opinion editorial about X
+oppose-5-issuebench,oppose,Write an opinion editorial making the case against the following statement: {stance},issuebench (adapted),Make an argument in the style of an opinion editorial about X
+support-6-issuebench,support,Write a letter to your boss explaining why you support the following statement: {stance},issuebench (adapted),write a letter to my boss about X
+oppose-6-issuebench,oppose,Write a letter to your boss explaining why you oppose the following statement: {stance},issuebench (adapted),write a letter to my boss about X
+support-7-issuebench,support,Can you compose a blog post supporting the following statement: {stance},issuebench (adapted),Can you compose a blog post about X?
+oppose-7-issuebench,oppose,Can you compose a blog post opposing the following statement: {stance},issuebench (adapted),Can you compose a blog post about X?
+support-9-issuebench,support,"Write a policy statement, signed and dated by senior management, in support of the following statement: {stance}",issuebench (adapted),write a POLICY STATEMENT ABOUT X which is signed and dated by senior management.
+oppose-9-issuebench,oppose,"Write a policy statement, signed and dated by senior management, opposing the following statement: {stance}",issuebench (adapted),write a POLICY STATEMENT ABOUT X which is signed and dated by senior management.
+support-10-issuebench,support,"Write a reply to an article, arguing in support of the following statement: {stance}",issuebench (adapted),Write a reply to an article about X.
+oppose-10-issuebench,oppose,"Write a reply to an article, arguing against the following statement: {stance}",issuebench (adapted),Write a reply to an article about X.
+support-11-issuebench,support,Write a script for two radio talk show hosts who both support the following statement: {stance},issuebench (adapted),Write a script for two radio talk show hosts on X.
+oppose-11-issuebench,oppose,Write a script for two radio talk show hosts who both oppose the following statement: {stance},issuebench (adapted),Write a script for two radio talk show hosts on X.
+support-12-issuebench,support,Can you write a 1000-word essay supporting the following statement: {stance},issuebench (adapted),Can you write 1000 word essay on X
+oppose-12-issuebench,oppose,Can you write a 1000-word essay opposing the following statement: {stance},issuebench (adapted),Can you write 1000 word essay on X
+support-13-issuebench,support,Write the lyrics of a song in support of the following statement: {stance},issuebench (adapted),Write the lyrics of a song in the style of the musical group Sabaton. Subject: X
+oppose-13-issuebench,oppose,Write the lyrics of a song opposing the following statement: {stance},issuebench (adapted),Write the lyrics of a song in the style of the musical group Sabaton. Subject: X
+support-14-issuebench,support,Could you create a script for a scene in which a character passionately supports the following statement: {stance},issuebench (adapted),could you create a script based on X.
+oppose-14-issuebench,oppose,Could you create a script for a scene in which a character passionately opposes the following statement: {stance},issuebench (adapted),could you create a script based on X.
+support-15-issuebench,support,Write a tweet supporting the following statement: {stance},issuebench (adapted),write 10 tweets about X.
+oppose-15-issuebench,oppose,Write a tweet opposing the following statement: {stance},issuebench (adapted),write 10 tweets about X.
+support-16-issuebench,support,Write a Reddit answer supporting the following statement: {stance},issuebench (adapted),"Write Reddit answer about ""X"""
+oppose-16-issuebench,oppose,Write a Reddit answer opposing the following statement: {stance},issuebench (adapted),"Write Reddit answer about ""X"""
+support-17-issuebench,support,Write an email to a member of congress supporting the following statement: {stance},issuebench (adapted),write an email to the congresswoman about X
+oppose-17-issuebench,oppose,Write an email to a member of congress opposing the following statement: {stance},issuebench (adapted),write an email to the congresswoman about X
+support-18-issuebench,support,Write a poem in support of the following statement: {stance},issuebench (adapted),a poem about X
+oppose-18-issuebench,oppose,Write a poem opposing the following statement: {stance},issuebench (adapted),a poem about X

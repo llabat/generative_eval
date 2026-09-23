@@ -1,0 +1,47 @@
+# allenai/Llama-3.1-Tulu-3-8B-SFT (official checkpoint, pulled straight from
+# the HF hub -- not one of Leo's own reproductions).
+# Run with:
+#   python run_pipeline.py configs/allenai--Llama-3.1-Tulu/sft.yml
+# or stage by stage (e.g. as separate SLURM jobs):
+#   python generate_texts.py configs/allenai--Llama-3.1-Tulu/sft.yml
+#   python classify_stance.py configs/allenai--Llama-3.1-Tulu/sft.yml
+#   python classify_refusal.py configs/allenai--Llama-3.1-Tulu/sft.yml
+
+model: allenai/Llama-3.1-Tulu-3-8B-SFT
+
+sampling_configs:
+  - name: model_default
+    num_generations: 100
+    params: {}   # {} -> use the model's own generation_config (falling back
+                 #  to temperature=0.7/top_p=0.9 if it doesn't ship one)
+  - name: low_temp
+    num_generations: 100
+    params: {temperature: 0.3, top_p: 0.9, top_k: 50}
+  - name: high_temp
+    num_generations: 100
+    params: {temperature: 1.0, top_p: 1.0, top_k: 50}
+
+generation:
+  max_new_tokens: 1024
+  backend: vllm   # see vllm_backend.py + run_generate_texts.sbatch's
+                   #  FlashInfer/nvcc + spawn-multiprocessing env vars
+
+prompts:
+  # First run: python export_mevs_opinions.py --output-csv mevs_opinions.csv
+  opinions_csv: mevs_opinions.csv     # question_id, stance columns
+  templates_csv: templates.csv        # template_id, template columns
+
+stance_classifier:
+  model: /data/labat/models/leolabat/Llama-3.1-Tulu-8B-SFT-100k
+  template_id: templ-5   # IssueBench's own pick (extended dynamic prompt, llm
+                          #  framing, negative examples, text first)
+  batch_size: 64
+  max_new_tokens: 64
+
+refusal_classifier:
+  checkpoint: /home/labat/refusal/configs/ca_and_ft/checkpoints
+  batch_size: 256
+  max_length: 4096
+
+output_dir: runs/Llama-3.1-Tulu-3-8B-SFT
+resume: true

@@ -1,0 +1,20 @@
+# generated run outputs
+runs/
+archive/
+
+# python cache
+__pycache__/
+*.pyc
+
+# jupyter checkpoints
+.ipynb_checkpoints/
+
+# scratch / generated data, not source inputs
+allenai-llama-3.1-tulu-sample_1k.csv
+Untitled.ipynb
+
+# hpc-specific job scripts
+*.sbatch
+
+# not for versioning
+claude_suggestions_opinionated_requests.csv

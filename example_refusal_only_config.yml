@@ -1,0 +1,12 @@
+# Standalone refusal-classifier config: no output_dir, no model/prompts/
+# sampling_configs -- just points classify_refusal.py at any CSV with
+# `prompt`/`response` columns. Run with:
+#   python classify_refusal.py example_refusal_only_config.yml
+
+refusal_classifier:
+  checkpoint: /home/labat/refusal/configs/ca_and_ft/checkpoints
+  input_csv: /path/to/some_generations.csv
+  # output_csv: /path/to/output.csv   # optional, defaults to
+                                       #  <input_csv minus .csv>_classified.csv
+  batch_size: 256
+  max_length: 4096

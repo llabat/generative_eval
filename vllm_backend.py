@@ -164,7 +164,7 @@ def load_judge_model(model_path, tensor_parallel_size=1):
     return llm, tokenizer
 
 
-def classify_stance_batch(llm, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64, temperature=None):
+def classify_stance_batch(llm, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64, temperature=None, chat_template_kwargs=None):
     """Same signature/semantics as classify_stance.classify_stance_batch, but
     submits every (stance, response) pair to vLLM as one batched call
     instead of chunking through model.generate() -- batch_size is accepted
@@ -172,6 +172,8 @@ def classify_stance_batch(llm, tokenizer, template, stances, responses, batch_si
     temperature=None -> greedy, matching the transformers backend's
     do_sample=False -- vLLM's own temperature=0.0 already means greedy, so
     no separate do_sample flag is needed here.
+    chat_template_kwargs is forwarded to apply_chat_template, e.g.
+    {"enable_thinking": False} for hybrid-thinking judges (Qwen3-style).
     """
     from vllm import SamplingParams
 
@@ -181,7 +183,8 @@ def classify_stance_batch(llm, tokenizer, template, stances, responses, batch_si
     ]
     prompts = [
         tokenizer.apply_chat_template(
-            [{"role": "user", "content": text}], add_generation_prompt=True, tokenize=False
+            [{"role": "user", "content": text}], add_generation_prompt=True, tokenize=False,
+            **(chat_template_kwargs or {}),
         )
         for text in texts
     ]

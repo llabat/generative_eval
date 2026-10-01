@@ -46,6 +46,11 @@ Requires a `stance_classifier:` section:
                                        #  fit on one card. Ignored by the transformers
                                        #  backend, which already shards across every
                                        #  visible GPU via device_map="auto".
+      chat_template_kwargs: null     # optional, default null; a mapping forwarded to the
+                                       #  judge tokenizer's apply_chat_template, e.g.
+                                       #  {enable_thinking: false} for hybrid-thinking
+                                       #  judges (Qwen3-style) whose default thinking
+                                       #  output would eat the max_new_tokens budget.
 
 Reads <output_dir>/final.csv if it already exists (e.g. classify_refusal.py
 ran first), else <output_dir>/generations.csv, and writes/overwrites
@@ -68,7 +73,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from pipeline_config import load_config, output_path
 
-DEFAULT_TEMPLATES_CSV = "adapted_issuebench_stance_prompt_templates.csv"
+DEFAULT_TEMPLATES_CSV = "stance_judge/adapted_issuebench_stance_prompt_templates.csv"
 VALID_LABELS = {"1", "2", "3", "4", "5", "refusal"}
 LABEL_RE = re.compile(r"\b(1|2|3|4|5|refusal)\b", re.IGNORECASE)
 
@@ -131,7 +136,7 @@ def backend_module(name):
     raise ValueError(f"Unknown stance_classifier.backend: {name!r} (expected 'transformers' or 'vllm')")
 
 
-def classify_stance_batch(model, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64, temperature=None):
+def classify_stance_batch(model, tokenizer, template, stances, responses, batch_size=64, max_new_tokens=64, temperature=None, chat_template_kwargs=None):
     results = []
     pbar = tqdm(total=len(stances), desc="Classifying stance")
 
@@ -158,6 +163,7 @@ def classify_stance_batch(model, tokenizer, template, stances, responses, batch_
             return_dict=True,
             return_tensors="pt",
             padding=True,
+            **(chat_template_kwargs or {}),
         ).to(model.device)
 
         outputs = model.generate(
@@ -223,6 +229,7 @@ def main():
         batch_size=sc_cfg.get("batch_size", 64),
         max_new_tokens=sc_cfg.get("max_new_tokens", 64),
         temperature=temperature,
+        chat_template_kwargs=sc_cfg.get("chat_template_kwargs"),
     )
 
     parsed = [parse_label(r) for r in raw]

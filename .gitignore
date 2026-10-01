@@ -1,6 +1,14 @@
 # generated run outputs
 runs/
 archive/
+data/
+logs/
+stance_chunks*/
+
+# raw/intermediate exports, not source inputs
+annotations_generations-stance_all_train.csv
+a100_70b_templ5_5000.csv
+pilot_70b_templ5_1000.csv
 
 # python cache
 __pycache__/

@@ -54,7 +54,15 @@ def parse_args():
     p.add_argument("--tensor-parallel-size", type=int, default=1)
     p.add_argument("--chat-template-kwargs", type=json.loads, default=None,
                     help='JSON forwarded to apply_chat_template, e.g. \'{"enable_thinking": false}\'')
-    return p.parse_args()
+    p.add_argument("--temperature", type=float, default=None,
+                    help="None (default) -> greedy/deterministic. A float (e.g. 1.0) -> sampling at that temperature.")
+    p.add_argument("--n-samples", type=int, default=1,
+                    help="Repeat each template this many times (only meaningful with --temperature set -- "
+                         "greedy is deterministic, so repeating it would just waste compute on identical output).")
+    args = p.parse_args()
+    if args.n_samples > 1 and args.temperature is None:
+        p.error("--n-samples > 1 requires --temperature (greedy decoding is deterministic, repeats would be identical)")
+    return args
 
 
 def resolve_template_ids(spec, templates_csv):
@@ -64,7 +72,7 @@ def resolve_template_ids(spec, templates_csv):
         return [r["id"] for r in csv.DictReader(f)]
 
 
-def already_done(output_csv, model_name, n_gold):
+def already_done(output_csv, model_name, n_gold, n_samples):
     if not os.path.exists(output_csv):
         return set()
     counts = {}
@@ -72,7 +80,8 @@ def already_done(output_csv, model_name, n_gold):
         for r in csv.DictReader(f):
             if r["model"] == model_name:
                 counts[r["template_id"]] = counts.get(r["template_id"], 0) + 1
-    return {tid for tid, n in counts.items() if n == n_gold}
+    needed = n_gold * n_samples
+    return {tid for tid, n in counts.items() if n == needed}
 
 
 def main():
@@ -85,7 +94,7 @@ def main():
     print(f"Loaded {len(gold_rows)} gold rows")
 
     template_ids = resolve_template_ids(args.templates, args.templates_csv)
-    done = already_done(args.output_csv, model_name, len(gold_rows))
+    done = already_done(args.output_csv, model_name, len(gold_rows), args.n_samples)
     pending = [t for t in template_ids if t not in done]
     print(f"Templates: {len(template_ids)} total, {len(done)} already done for {model_name}, {len(pending)} pending: {pending}")
     if not pending:
@@ -96,7 +105,7 @@ def main():
     model, tokenizer = backend.load_judge_model(args.judge_model, tensor_parallel_size=args.tensor_parallel_size)
 
     write_header = not os.path.exists(args.output_csv)
-    fieldnames = ["model", "template_id", "row_number", "gold_labels", "judge_raw_output", "judge_reparsed_label"]
+    fieldnames = ["model", "template_id", "sample_idx", "temperature", "row_number", "gold_labels", "judge_raw_output", "judge_reparsed_label"]
     with open(args.output_csv, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         if write_header:
@@ -105,22 +114,25 @@ def main():
         for template_id in pending:
             template = load_template(args.templates_csv, template_id)
             print(f"--- {template_id} ---")
-            kwargs = dict(max_new_tokens=MAX_NEW_TOKENS, temperature=None, chat_template_kwargs=args.chat_template_kwargs)
-            if args.backend == "transformers":
-                kwargs["batch_size"] = BATCH_SIZE
-            raw_outputs = backend.classify_stance_batch(model, tokenizer, template, stances, responses, **kwargs)
+            for sample_idx in range(args.n_samples):
+                kwargs = dict(max_new_tokens=MAX_NEW_TOKENS, temperature=args.temperature, chat_template_kwargs=args.chat_template_kwargs)
+                if args.backend == "transformers":
+                    kwargs["batch_size"] = BATCH_SIZE
+                raw_outputs = backend.classify_stance_batch(model, tokenizer, template, stances, responses, **kwargs)
 
-            for gold_row, raw in zip(gold_rows, raw_outputs):
-                writer.writerow({
-                    "model": model_name,
-                    "template_id": template_id,
-                    "row_number": gold_row["row_number"],
-                    "gold_labels": gold_row["gold_labels"],
-                    "judge_raw_output": raw,
-                    "judge_reparsed_label": parse_label(raw),
-                })
-            f.flush()
-            print(f"  wrote {len(gold_rows)} rows")
+                for gold_row, raw in zip(gold_rows, raw_outputs):
+                    writer.writerow({
+                        "model": model_name,
+                        "template_id": template_id,
+                        "sample_idx": sample_idx,
+                        "temperature": args.temperature if args.temperature is not None else 0.0,
+                        "row_number": gold_row["row_number"],
+                        "gold_labels": gold_row["gold_labels"],
+                        "judge_raw_output": raw,
+                        "judge_reparsed_label": parse_label(raw),
+                    })
+                f.flush()
+                print(f"  sample {sample_idx}: wrote {len(gold_rows)} rows")
 
     print(f"Done. Results in {args.output_csv}")
 
